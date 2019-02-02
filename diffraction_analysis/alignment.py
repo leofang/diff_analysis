@@ -1,5 +1,7 @@
 # copied from /home/xf03id/ipython_ophyd/profile_collection/startup/90-alignment.py
 
+import numpy as np
+import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
 import scipy
 import pickle
@@ -111,7 +113,7 @@ def data_erf_fit(xdata,ydata,linear_flag=True):
 
     #print('a={} b={} c={}'.format(popt[0],popt[1],popt[2]))
     plt.plot(xdata,fit_data)
-    plt.title('sid= %d edge = %.3f, FWHM = %.2f nm' % (sid,popt[0], popt[1]*2.3548*1000.0))
+    #plt.title('sid= %d edge = %.3f, FWHM = %.2f nm' % (sid,popt[0], popt[1]*2.3548*1000.0))
     return (popt[0],popt[1]*2.3548*1000.0)
 
 
@@ -168,7 +170,7 @@ def mll_z_alignment(z_start, z_end, z_num, mot, start, end, num, acq_time, elem=
 
 def find_edge(xdata,ydata,size):
     set_point=0.5
-    j=int (ceil(size/2.0))
+    j=int (np.ceil(size/2.0))
     l=len(ydata)
     local_mean=np.zeros(l-size)
     for i in range(l-size):
