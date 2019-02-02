@@ -1,8 +1,9 @@
-# copied from /home/xf03id/ipython_ophyd/profile_collection/startup/90-alignment.py
+# adapted from /home/xf03id/ipython_ophyd/profile_collection/startup/90-alignment.py
 
 import numpy as np
 import matplotlib.pyplot as plt
 from scipy.optimize import curve_fit
+import scipy.io
 import scipy
 import pickle
 
@@ -83,38 +84,38 @@ def square_fit(sid,elem,mon='sclr1_ch4',linear_flag=True):
 
 
 
-def data_erf_fit(xdata,ydata,linear_flag=True):
-
-    xdata=np.array(xdata,dtype=float)
-    ydata=np.array(ydata,dtype=float)
-    y_min=np.min(ydata)
-    y_max=np.max(ydata)
-    ydata=(ydata-y_min)/y_max
-    plt.figure()
-    plt.plot(xdata,ydata,'bo')
+def data_erf_fit(xdata, ydata, linear_flag=True, plot=False):
+    xdata = np.array(xdata, dtype=float)
+    ydata = np.array(ydata, dtype=float)
+    y_min = np.min(ydata)
+    y_max = np.max(ydata)
+    ydata = (ydata-y_min)/y_max
     y_mean = np.mean(ydata)
     half_size = int (len(ydata)/2)
     y_half_mean = np.mean(ydata[0:half_size])
-    edge_pos=find_edge(xdata,ydata,10)
+    edge_pos = find_edge(xdata, ydata, 10)
+
     if y_half_mean < y_mean:
         if linear_flag == False:
-            popt,pcov=curve_fit(erfunc1,xdata,ydata, p0=[edge_pos,0.05,0.5])
-            fit_data=erfunc1(xdata,popt[0],popt[1],popt[2]);
+            popt, pcov = curve_fit(erfunc1, xdata, ydata, p0=[edge_pos,0.05,0.5])
+            fit_data = erfunc1(xdata, popt[0], popt[1], popt[2]);
         else:
-            popt,pcov=curve_fit(erfunc3,xdata,ydata, p0=[edge_pos,0.05,0.5,0,0])
-            fit_data=erfunc3(xdata,popt[0],popt[1],popt[2],popt[3],popt[4]);
+            popt, pcov = curve_fit(erfunc3, xdata, ydata, p0=[edge_pos,0.05,0.5,0,0])
+            fit_data = erfunc3(xdata, popt[0], popt[1], popt[2], popt[3], popt[4]);
     else:
         if linear_flag == False:
-            popt,pcov=curve_fit(erfunc2,xdata,ydata,p0=[edge_pos,0.05,0.5])
-            fit_data=erfunc2(xdata,popt[0],popt[1],popt[2]);
+            popt, pcov = curve_fit(erfunc2, xdata, ydata, p0=[edge_pos,0.05,0.5])
+            fit_data = erfunc2(xdata, popt[0], popt[1], popt[2]);
         else:
-            popt,pcov=curve_fit(erfunc4,xdata,ydata,p0=[edge_pos,0.05,0.5,0,0])
-            fit_data=erfunc4(xdata,popt[0],popt[1],popt[2],popt[3],popt[4]);
+            popt, pcov = curve_fit(erfunc4, xdata, ydata, p0=[edge_pos,0.05,0.5,0,0])
+            fit_data = erfunc4(xdata, popt[0], popt[1], popt[2], popt[3], popt[4]);
 
-    #print('a={} b={} c={}'.format(popt[0],popt[1],popt[2]))
-    plt.plot(xdata,fit_data)
-    #plt.title('sid= %d edge = %.3f, FWHM = %.2f nm' % (sid,popt[0], popt[1]*2.3548*1000.0))
-    return (popt[0],popt[1]*2.3548*1000.0)
+    if plot:
+        plt.figure()
+        plt.plot(xdata, ydata, 'bo')
+        plt.plot(xdata, fit_data)
+
+    return (popt[0], popt[1]*2.3548*1000.0)
 
 
 
@@ -583,4 +584,30 @@ def scan_info(sid):
     si.det = h.start['detectors']
     return(si)
 
+def get_edge_pos_1D(mat, fit=False):
+    '''
+    Arguments:
+        mat: a dict returned by scipy.io.loadmat
+        fit: whether or not to get the edge position from an erf fit
 
+    Returns:
+        edge_pos: an numpy.ndarray of dtype int containing the edge positions
+            for each angle.
+    '''
+    flures = mat['fluorescence'].swapaxes(0, 1)
+    num_angle, num_pos = flures.shape
+    edge_pos = []
+    idx_pos = np.arange(num_pos)
+    for i in range(num_angle):
+        ydata = flures[i]
+        if fit:
+            pos, _ = data_erf_fit(idx_pos, ydata)
+        else:
+            y_min = np.min(ydata)
+            y_max = np.max(ydata)
+            ydata = (ydata-y_min)/y_max
+            pos = find_edge(idx_pos, ydata, 10)
+        edge_pos.append(pos)
+    edge_pos = np.around(edge_pos).astype(int)
+
+    return edge_pos
